@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Injection Testing Tool</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function SQLInjectionTester() {
+            const [targetUrl, setTargetUrl] = useState('');
+            const [parameter, setParameter] = useState('');
+            const [method, setMethod] = useState('GET');
+            const [customHeaders, setCustomHeaders] = useState('');
+            const [cookies, setCookies] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [results, setResults] = useState(null);
+            const [error, setError] = useState('');
+            const [progress, setProgress] = useState(0);
+            const [payloadStats, setPayloadStats] = useState(null);
+            const [isReloading, setIsReloading] = useState(false);
+            const [testHistory, setTestHistory] = useState([]);
+            const [showHistory, setShowHistory] = useState(false);
+            const [user, setUser] = useState(null);
+
+            // Check authentication status
+            useEffect(() => {
+                checkAuthStatus();
+                loadPayloadStats();
+            }, []);
+
+            const checkAuthStatus = async () => {
+                try {
+                    const response = await fetch('/auth/profile');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setUser(data.user);
+                        loadTestHistory();
+                    } else {
+                        // Redirect to login if not authenticated
+                        window.location.href = '/auth/login';
+                    }
+                } catch (err) {
+                    console.error('Auth check failed:', err);
+                    window.location.href = '/auth/login';
+                }
+            };
+
+            const handleLogout = async () => {
+                try {
+                    await fetch('/auth/logout', { method: 'POST' });
+                    window.location.href = '/auth/login';
+                } catch (err) {
+                    console.error('Logout failed:', err);
+                }
+            };
+
+            const loadTestHistory = async () => {
+                try {
+                    const response = await fetch('/api/test-history?per_page=5');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setTestHistory(data.test_sessions);
+                    }
+                } catch (err) {
+                    console.error('Failed to load test history:', err);
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setError('');
+                setResults(null);
+                setProgress(0);
+
+                try {
+                    const response = await fetch('/api/test-sqli', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            target_url: targetUrl,
+                            parameter,
+                            method,
+                            custom_headers: customHeaders,
+                            cookies,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Failed to run SQL injection test');
+                    }
+
+                    setResults(data);
+                    loadTestHistory(); // Refresh history after new test
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setIsLoading(false);
+                    setProgress(100);
+                }
+            };
+
+            const exportResults = () => {
+                if (!results) return;
+
+                const dataStr = JSON.stringify(results, null, 2);
+                const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+                const exportFileDefaultName = 'sqli-test-results-' + Date.now() + '.json';
+
+                const linkElement = document.createElement("a");
+                linkElement.setAttribute("href", dataUri);
+                linkElement.setAttribute("download", exportFileDefaultName);
+                linkElement.click();
+            };
+
+            const getVulnerabilityColor = (isVulnerable) => {
+                return isVulnerable ? 'text-red-400' : 'text-green-400';
+            };
+
+            const getVulnerabilityIcon = (isVulnerable) => {
+                return isVulnerable ? 'fa-exclamation-triangle' : 'fa-check-circle';
+            };
+
+            const getVulnerabilityBadge = (isVulnerable) => {
+                return isVulnerable 
+                    ? 'bg-red-800 text-red-200' 
+                    : 'bg-green-800 text-green-200';
+            };
+
+            const getVulnerabilityBorder = (isVulnerable) => {
+                return isVulnerable 
+                    ? 'bg-red-950 border-red-800' 
+                    : 'bg-slate-700 border-slate-600';
+            };
+
+            const loadPayloadStats = async () => {
+                try {
+                    const response = await fetch('/api/payload-stats');
+                    const data = await response.json();
+                    if (response.ok) {
+                        setPayloadStats(data);
+                    }
+                } catch (err) {
+                    console.error('Failed to load payload stats:', err);
+                }
+            };
+
+            const reloadPayloads = async () => {
+                setIsReloading(true);
+                try {
+                    const response = await fetch('/api/reload-payloads', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        await loadPayloadStats(); // Refresh stats after reload
+                        alert('Payloads reloaded successfully! ' + data.payload_count + ' payloads available.');
+                    } else {
+                        throw new Error(data.error || 'Failed to reload payloads');
+                    }
+                } catch (err) {
+                    alert('Error reloading payloads: ' + err.message);
+                } finally {
+                    setIsReloading(false);
+                }
+            };
+
+            const formatDate = (dateString) => {
+                return new Date(dateString).toLocaleString();
+            };
+
+            if (!user) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+                        <div className="text-center">
+                            <i className="fas fa-spinner fa-spin text-6xl text-purple-400 mb-4"></i>
+                            <p className="text-white text-xl">Loading...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+                    <div className="max-w-7xl mx-auto space-y-6">
+                        {/* Header with User Info */}
+                        <div className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-3">
+                                    <i className="fas fa-shield-alt text-4xl text-purple-400"></i>
+                                    <h1 className="text-4xl font-bold text-white">SQL Injector</h1>
+                                </div>
+                                <div className="text-slate-400">
+                                    Welcome back, <span className="text-purple-400 font-medium">{user.username}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <button
+                                    onClick={() => setShowHistory(!showHistory)}
+                                    className="bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2 rounded-lg text-sm transition-colors duration-200 flex items-center space-x-2"
+                                >
+                                    <i className="fas fa-history"></i>
+                                    <span>Test History</span>
+                                </button>
+                                <button
+                                    onClick={handleLogout}
+                                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200 flex items-center space-x-2"
+                                >
+                                    <i className="fas fa-sign-out-alt"></i>
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Test History Panel */}
+                        {showHistory && (
+                            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl">
+                                <div className="p-6 border-b border-slate-700">
+                                    <div className="flex items-center space-x-3">
+                                        <i className="fas fa-history text-purple-400 text-xl"></i>
+                                        <h2 className="text-2xl font-semibold text-white">Recent Test History</h2>
+                                    </div>
+                                </div>
+                                <div className="p-6">
+                                    {testHistory.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {testHistory.map((session) => (
+                                                <div key={session.id} className="bg-slate-700 p-4 rounded-lg border border-slate-600">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="font-mono text-sm text-slate-300 truncate">
+                                                            {session.target_url}
+                                                        </div>
+                                                        <div className="text-xs text-slate-400">
+                                                            {formatDate(session.created_at)}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center space-x-4 text-sm">
+                                                        <span className="text-slate-400">
+                                                            Parameter: <span className="text-purple-400">{session.parameter}</span>
+                                                        </span>
+                                                        <span className="text-slate-400">
+                                                            Method: <span className="text-blue-400">{session.method}</span>
+                                                        </span>
+                                                        <span className="text-slate-400">
+                                                            Payloads: <span className="text-green-400">{session.total_payloads}</span>
+                                                        </span>
+                                                        <span className="text-slate-400">
+                                                            Vulnerabilities: <span className="text-red-400">{session.vulnerabilities_found}</span>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-slate-400">
+                                            <i className="fas fa-history text-4xl mb-4 text-slate-500"></i>
+                                            <p>No test history available</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Legal Notice */}
+                        <div className="bg-red-950 border border-red-800 rounded-lg p-4">
+                            <div className="flex items-center space-x-3">
+                                <i className="fas fa-exclamation-triangle text-red-400 text-xl"></i>
+                                <div className="text-red-200">
+                                    <strong>⚖️ Legal Notice:</strong> Only use this tool on systems you own or have explicit written permission
+                                    to test. Unauthorized testing is illegal and unethical. The developers are not responsible for any misuse.
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Payload Statistics Section */}
+                        {payloadStats && (
+                            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl">
+                                <div className="p-6 border-b border-slate-700">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3">
+                                            <i className="fas fa-database text-purple-400 text-xl"></i>
+                                            <h2 className="text-2xl font-semibold text-white">Payload Arsenal</h2>
+                                        </div>
+                                        <button
+                                            onClick={reloadPayloads}
+                                            disabled={isReloading}
+                                            className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200 flex items-center space-x-2 shadow-md"
+                                        >
+                                            {isReloading ? (
+                                                <>
+                                                    <i className="fas fa-spinner fa-spin"></i>
+                                                    <span>Reloading...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <i className="fas fa-sync-alt"></i>
+                                                    <span>Reload Payloads</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                    <p className="text-slate-400 mt-2">
+                                        {payloadStats.total_payloads > 1000 ? 'Comprehensive CSV payload database' : 'Local payload database from payloads.py file'}
+                                    </p>
+                                </div>
+                                <div className="p-6">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                                        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 text-center">
+                                            <div className="text-2xl font-bold text-purple-400">{payloadStats.total_payloads}</div>
+                                            <div className="text-slate-400 text-sm">Total Payloads</div>
+                                        </div>
+                                        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 text-center">
+                                            <div className="text-2xl font-bold text-blue-400">{payloadStats.categories.union_based || 0}</div>
+                                            <div className="text-slate-400 text-sm">Union-Based</div>
+                                        </div>
+                                        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 text-center">
+                                            <div className="text-2xl font-bold text-green-400">{payloadStats.categories.boolean_blind || 0}</div>
+                                            <div className="text-slate-400 text-sm">Boolean Blind</div>
+                                        </div>
+                                        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 text-center">
+                                            <div className="text-2xl font-bold text-yellow-400">{payloadStats.categories.time_based || 0}</div>
+                                            <div className="text-slate-400 text-sm">Time-Based</div>
+                                        </div>
+                                        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 text-center">
+                                            <div className="text-2xl font-bold text-red-400">{payloadStats.categories.error_based || 0}</div>
+                                            <div className="text-slate-400 text-sm">Error-Based</div>
+                                        </div>
+                                        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 text-center">
+                                            <div className="text-2xl font-bold text-orange-400">{payloadStats.categories.waf_bypass || 0}</div>
+                                            <div className="text-slate-400 text-sm">WAF Bypass</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Payload Categories Breakdown */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600">
+                                            <h3 className="text-white font-medium mb-3 flex items-center">
+                                                <i className="fas fa-chart-pie text-purple-400 mr-2"></i>
+                                                Payload Categories
+                                            </h3>
+                                            <div className="space-y-2 text-sm">
+                                                {Object.entries(payloadStats.categories).map(([category, count]) => (
+                                                    <div key={category} className="flex justify-between">
+                                                        <span className="text-slate-300 capitalize">{category.replace('_', ' ')}:</span>
+                                                        <span className="text-slate-400">{count}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600">
+                                            <h3 className="text-white font-medium mb-3 flex items-center">
+                                                <i className="fas fa-eye text-purple-400 mr-2"></i>
+                                                Sample Payloads
+                                            </h3>
+                                            <div className="space-y-2 text-sm max-h-32 overflow-y-auto custom-scrollbar">
+                                                {payloadStats.sample_payloads && Object.values(payloadStats.sample_payloads).flat().slice(0, 8).map((payload, index) => (
+                                                    <div key={index} className="font-mono text-slate-300 bg-slate-800 p-2 rounded border border-slate-600 break-all">
+                                                        {payload}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Main Content */}
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                            {/* Input Form */}
+                            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl">
+                                <div className="p-6 border-b border-slate-700">
+                                    <div className="flex items-center space-x-3">
+                                        <i className="fas fa-cog text-purple-400 text-xl"></i>
+                                        <h2 className="text-2xl font-semibold text-white">Test Configuration</h2>
+                                    </div>
+                                    <p className="text-slate-400 mt-2">Configure your SQL injection test parameters</p>
+                                </div>
+                                <div className="p-6">
+                                    <form onSubmit={handleSubmit} className="space-y-6">
+                                        <div className="space-y-2">
+                                            <label htmlFor="url" className="block text-sm font-medium text-white">
+                                                <i className="fas fa-globe mr-2"></i>Target URL
+                                            </label>
+                                            <input
+                                                id="url"
+                                                type="url"
+                                                placeholder="https://example.com/page.php?id=1"
+                                                value={targetUrl}
+                                                onChange={(e) => setTargetUrl(e.target.value)}
+                                                required
+                                                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label htmlFor="parameter" className="block text-sm font-medium text-white">
+                                                <i className="fas fa-tag mr-2"></i>Vulnerable Parameter
+                                            </label>
+                                            <input
+                                                id="parameter"
+                                                placeholder="id, username, search, etc."
+                                                value={parameter}
+                                                onChange={(e) => setParameter(e.target.value)}
+                                                required
+                                                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label htmlFor="method" className="block text-sm font-medium text-white">
+                                                <i className="fas fa-exchange-alt mr-2"></i>Request Method
+                                            </label>
+                                            <select
+                                                id="method"
+                                                value={method}
+                                                onChange={(e) => setMethod(e.target.value)}
+                                                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                            >
+                                                <option value="GET">GET</option>
+                                                <option value="POST">POST</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label htmlFor="headers" className="block text-sm font-medium text-white">
+                                                <i className="fas fa-list mr-2"></i>Custom Headers (Optional)
+                                            </label>
+                                            <textarea
+                                                id="headers"
+                                                placeholder="Authorization: Bearer token&#10;User-Agent: Custom Agent&#10;X-Forwarded-For: 127.0.0.1"
+                                                value={customHeaders}
+                                                onChange={(e) => setCustomHeaders(e.target.value)}
+                                                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                                rows={4}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label htmlFor="cookies" className="block text-sm font-medium text-white">
+                                                <i className="fas fa-cookie-bite mr-2"></i>Cookies (Optional)
+                                            </label>
+                                            <input
+                                                id="cookies"
+                                                placeholder="sessionid=abc123; csrftoken=xyz789; auth=token"
+                                                value={cookies}
+                                                onChange={(e) => setCookies(e.target.value)}
+                                                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            disabled={isLoading}
+                                            className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:from-purple-800 disabled:to-purple-900 text-white font-medium py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg"
+                                        >
+                                            {isLoading ? (
+                                                <>
+                                                    <i className="fas fa-spinner fa-spin text-lg"></i>
+                                                    <span className="text-lg">Running SQL Injection Tests...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <i className="fas fa-rocket text-lg"></i>
+                                                    <span className="text-lg">Launch Injection Tests</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </form>
+
+                                    {error && (
+                                        <div className="mt-6 bg-red-950 border border-red-800 rounded-lg p-4">
+                                            <div className="flex items-center space-x-3">
+                                                <i className="fas fa-times-circle text-red-400 text-lg"></i>
+                                                <span className="text-red-200 font-medium">{error}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Results */}
+                            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl">
+                                <div className="p-6 border-b border-slate-700">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3">
+                                            <i className="fas fa-chart-line text-purple-400 text-xl"></i>
+                                            <h2 className="text-2xl font-semibold text-white">Test Results</h2>
+                                        </div>
+                                        {results && (
+                                            <button
+                                                onClick={exportResults}
+                                                className="bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2 rounded-lg text-sm transition-colors duration-200 flex items-center space-x-2 shadow-md"
+                                            >
+                                                <i className="fas fa-download"></i>
+                                                <span>Export Results</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-slate-400 mt-2">Vulnerability detection results and payload analysis</p>
+                                </div>
+                                <div className="p-6">
+                                    {!results && !isLoading && (
+                                        <div className="text-center py-12 text-slate-400">
+                                            <i className="fas fa-search text-6xl mb-6 text-slate-500"></i>
+                                            <h3 className="text-xl font-medium mb-2">Ready to Scan</h3>
+                                            <p>Configure your test parameters and click "Launch Injection Tests" to begin scanning.</p>
+                                        </div>
+                                    )}
+
+                                    {isLoading && (
+                                        <div className="text-center py-12">
+                                            <div className="relative">
+                                                <i className="fas fa-spinner fa-spin text-6xl text-purple-400 mb-6"></i>
+                                            </div>
+                                            <h3 className="text-xl font-medium text-slate-300 mb-2">Testing SQL Injection Payloads</h3>
+                                            <p className="text-slate-400 mb-4">This may take a few minutes depending on the target response time.</p>
+                                            <div className="w-full bg-slate-700 rounded-full h-2">
+                                                <div 
+                                                    className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-300"
+                                                    style={{width: progress + '%'}}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {results && (
+                                        <div className="space-y-6">
+                                            {/* Summary Cards */}
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="bg-slate-700 p-6 rounded-lg border border-slate-600">
+                                                    <div className="flex items-center space-x-3">
+                                                        <i className="fas fa-list-ol text-blue-400 text-2xl"></i>
+                                                        <div>
+                                                            <div className="text-3xl font-bold text-white">{results.total_payloads}</div>
+                                                            <div className="text-slate-400 text-sm">Payloads Tested</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-slate-700 p-6 rounded-lg border border-slate-600">
+                                                    <div className="flex items-center space-x-3">
+                                                        <i className="fas fa-bug text-red-400 text-2xl"></i>
+                                                        <div>
+                                                            <div className="text-3xl font-bold text-red-400">{results.vulnerabilities_found}</div>
+                                                            <div className="text-slate-400 text-sm">Vulnerabilities Found</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Vulnerability Summary */}
+                                            {results.vulnerabilities_found > 0 && (
+                                                <div className="bg-red-950 border border-red-800 rounded-lg p-4">
+                                                    <div className="flex items-center space-x-2">
+                                                        <i className="fas fa-exclamation-triangle text-red-400"></i>
+                                                        <span className="text-red-200 font-medium">
+                                                            ⚠️ {results.vulnerabilities_found} potential SQL injection vulnerabilities detected!
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Results List */}
+                                            <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                                                {results.results.map((result, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className={'p-4 rounded-lg border transition-all duration-200 hover:shadow-lg ' + getVulnerabilityBorder(result.vulnerability_detected)}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <div className="flex items-center space-x-3">
+                                                                <i className={'fas ' + getVulnerabilityIcon(result.vulnerability_detected) + ' ' + getVulnerabilityColor(result.vulnerability_detected)}></i>
+                                                                <span className={'px-3 py-1 rounded-full text-xs font-medium ' + getVulnerabilityBadge(result.vulnerability_detected)}>
+                                                                    {result.vulnerability_detected ? "VULNERABLE" : "SAFE"}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex space-x-4 text-xs text-slate-400">
+                                                                <span><i className="fas fa-signal mr-1"></i>Status: {result.status_code}</span>
+                                                                <span><i className="fas fa-ruler mr-1"></i>Length: {result.response_length}</span>
+                                                                <span><i className="fas fa-clock mr-1"></i>Time: {result.response_time}ms</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="font-mono text-sm text-slate-300 bg-slate-800 p-3 rounded border border-slate-600 break-all">
+                                                            {result.payload}
+                                                        </div>
+                                                        {result.vulnerability_detected && (
+                                                            <div className="mt-3 text-xs text-red-300 bg-red-900 bg-opacity-50 p-2 rounded">
+                                                                <i className="fas fa-info-circle mr-1"></i>
+                                                                <strong>Detection reason:</strong> {result.detection_reason}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<SQLInjectionTester />, document.getElementById('root'));
+    </script>
+</body>
+</html>
