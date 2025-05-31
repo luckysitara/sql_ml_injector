@@ -1,6 +1,6 @@
-# SQL Injector v3.0 - AI-Powered SQL Injection Testing Platform
+# SQL Injector v2.0 - Professional SQL Injection Testing Tool
 
-A comprehensive, professional-grade SQL injection vulnerability scanner with advanced machine learning capabilities, AI-powered analysis, and automated report generation. This tool combines traditional security testing with cutting-edge AI technology for enhanced vulnerability detection and professional security reporting.
+A comprehensive, professional-grade SQL injection vulnerability scanner with a comprehensive payload database and automated report generation. This tool focuses on traditional security testing for enhanced vulnerability detection and professional security reporting.
 
 ## ⚠️ Legal Notice
 
@@ -14,25 +14,13 @@ Unauthorized testing is illegal and unethical. The developers are not responsibl
 
 ## 🚀 Project Overview
 
-SQL Injector v3.0 is a next-generation security testing platform that revolutionizes SQL injection vulnerability detection through:
-
-### 🧠 **AI-Powered Detection Engine**
-- **Machine Learning Models**: LSTM neural networks and Random Forest classifiers trained on comprehensive SQL injection datasets
-- **Ensemble Prediction**: Combines multiple ML models for superior accuracy (98%+ detection rate)
-- **Pattern Recognition**: Advanced response analysis using trained models to identify subtle vulnerability indicators
-- **Adaptive Learning**: Continuously improves detection through model retraining with new datasets
-
-### 📊 **Intelligent Report Generation**
-- **OpenAI Integration**: GPT-4 powered analysis for executive summaries and technical recommendations
-- **Professional Reports**: Generate publication-ready HTML and PDF security reports
-- **Risk Assessment**: Automated CVSS-style risk scoring and business impact analysis
-- **Compliance Ready**: Reports formatted for security audits and compliance requirements
+SQL Injector v2.0 is a security testing platform that focuses on SQL injection vulnerability detection through:
 
 ### 🔧 **Advanced Testing Capabilities**
 - **Comprehensive Payload Database**: 10,000+ SQL injection payloads across 18+ categories
 - **Multi-Database Support**: MySQL, PostgreSQL, MSSQL, Oracle, SQLite, and NoSQL injection techniques
 - **WAF Bypass Techniques**: Advanced evasion payloads for modern web application firewalls
-- **Real-time Analysis**: Live vulnerability detection with ML-enhanced pattern matching
+- **Real-time Analysis**: Live vulnerability detection with pattern matching
 
 ### 🛡️ **Enterprise Security Features**
 - **User Authentication**: Secure multi-user environment with role-based access control
@@ -43,10 +31,9 @@ SQL Injector v3.0 is a next-generation security testing platform that revolution
 ## 🏗️ Architecture Overview
 
 \`\`\`
-SQL Injector v3.0 Architecture
+SQL Injector v2.0 Architecture
 ├── Frontend (React + Tailwind CSS)
 │   ├── Real-time Testing Interface
-│   ├── ML Model Management Dashboard
 │   ├── Report Generation Interface
 │   └── User Management System
 │
@@ -56,14 +43,7 @@ SQL Injector v3.0 Architecture
 │   ├── Database Models & ORM
 │   └── Security & Input Validation
 │
-├── AI/ML Engine
-│   ├── LSTM Neural Network (TensorFlow/Keras)
-│   ├── Random Forest Classifier (scikit-learn)
-│   ├── Ensemble Prediction System
-│   └── Response Pattern Analysis
-│
 ├── Report Generation System
-│   ├── OpenAI GPT-4 Integration
 │   ├── HTML Template Engine (Jinja2)
 │   ├── PDF Generation (pdfkit)
 │   └── Risk Assessment Engine
@@ -71,14 +51,13 @@ SQL Injector v3.0 Architecture
 └── Data Management
     ├── SQLite Database (User Data)
     ├── CSV Payload Database
-    ├── Model Persistence (HDF5/Pickle)
     └── Test Results Storage
 \`\`\`
 
 ## 📁 Project Structure
 
 \`\`\`
-sql-injector-v3/
+sql-injector-v2/
 │
 ├── app/                          # Flask application
 │   ├── __init__.py              # App factory and configuration
@@ -95,20 +74,11 @@ sql-injector-v3/
 │           ├── login.html       # User login page
 │           └── register.html    # User registration page
 │
-├── ml_model.py                  # Machine learning model implementation
-├── report_generator.py          # AI-powered report generation
+├── report_generator.py          # Report generation
 ├── payloads.py                  # Local payload database (18 categories)
 ├── run.py                       # Application entry point with CLI
 ├── requirements.txt             # Python dependencies
 ├── .env.example                 # Environment variables template
-├── models/                      # Trained ML models directory
-│   ├── lstm_model.h5           # Trained LSTM model
-│   ├── rf_model.pkl            # Trained Random Forest model
-│   ├── tokenizer.pkl           # Text tokenizer for LSTM
-│   └── vectorizer.pkl          # TF-IDF vectorizer for RF
-│
-├── datasets/                    # Training datasets
-│   └── clean_sql_dataset.csv   # SQL injection training data
 │
 ├── reports/                     # Generated reports
 │   ├── html/                   # HTML reports
@@ -124,14 +94,13 @@ sql-injector-v3/
 - **Python 3.8+** (Python 3.9+ recommended)
 - **pip** (Python package installer)
 - **wkhtmltopdf** (for PDF generation)
-- **OpenAI API Key** (for AI-powered reports)
 - **Git** (for cloning the repository)
 
 ### Step 1: Clone the Repository
 
 \`\`\`bash
-git clone https://github.com/your-username/sql-injector-v3.git
-cd sql-injector-v3
+git clone https://github.com/your-username/sql-injector-v2.git
+cd sql-injector-v2
 \`\`\`
 
 ### Step 2: Create Virtual Environment
@@ -177,9 +146,6 @@ nano .env
 **Required Environment Variables:**
 
 \`\`\`env
-# OpenAI Configuration (Required for AI reports)
-OPENAI_API_KEY=your_openai_api_key_here
-
 # Flask Configuration
 SECRET_KEY=your_super_secret_key_here
 FLASK_DEBUG=False
@@ -208,62 +174,7 @@ This creates:
 - Database tables
 - Default admin user: `admin` / `admin123` (⚠️ Change immediately!)
 
-### Step 6: Download Training Dataset
-
-\`\`\`bash
-# Create datasets directory
-mkdir -p datasets
-
-# Download the SQL injection dataset
-wget -O datasets/clean_sql_dataset.csv "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mbih-tvKJD7TTjrCGjADXX1qeMMs5vLOFH8.csv"
-
-# Or use your own dataset with columns: Query,Label
-\`\`\`
-
-### Step 7: Train Machine Learning Models
-
-\`\`\`bash
-# Train ML models using your dataset
-python run.py --train-model datasets/clean_sql_dataset.csv
-
-# This will:
-# 1. Train LSTM neural network
-# 2. Train Random Forest classifier
-# 3. Save models to models/ directory
-# 4. Display training metrics
-\`\`\`
-
-**Expected Training Output:**
-\`\`\`
-🤖 Training Machine Learning Model...
-============================================================
-Loading dataset from datasets/clean_sql_dataset.csv
-Dataset loaded: 148,000 samples
-Malicious samples: 74,000
-Benign samples: 74,000
-
-Training Random Forest model...
-Random Forest metrics: {'accuracy': 0.9777, 'precision': 0.9967, 'recall': 0.9606}
-
-Training LSTM model...
-Epoch 1/25
-...
-LSTM metrics: {'accuracy': 0.9831, 'precision': 0.9974, 'recall': 0.9702}
-
-✅ Model training completed successfully!
-\`\`\`
-
-### Step 8: Verify Installation
-
-\`\`\`bash
-# Check payload information
-python run.py --fetch-payloads
-
-# Verify model status
-python -c "from ml_model import SQLInjectionMLModel; print(SQLInjectionMLModel().get_model_info())"
-\`\`\`
-
-### Step 9: Start the Application
+### Step 6: Start the Application
 
 \`\`\`bash
 # Start the web application
@@ -297,12 +208,12 @@ python run.py --host 0.0.0.0 --port 8080 --debug
 4. **Launch SQL Injection Test**
    - Click "Launch Injection Tests"
    - Monitor real-time progress
-   - Review ML-enhanced results
+   - Review results
 
-5. **Generate AI-Powered Reports**
+5. **Generate Reports**
    - Navigate to Test History
    - Click "HTML Report" or "PDF Report"
-   - Download professional security reports
+   - Download security reports
 
 ### Command Line Interface
 
@@ -312,9 +223,6 @@ python run.py --help
 
 # Fetch payload statistics
 python run.py --fetch-payloads
-
-# Train new model with custom dataset
-python run.py --train-model /path/to/dataset.csv
 
 # Start with custom configuration
 python run.py --host 127.0.0.1 --port 8080 --debug
@@ -364,7 +272,7 @@ curl -X POST http://localhost:5000/api/test-sqli-public \
 
 #### Report Generation
 \`\`\`bash
-# Generate AI-powered report
+# Generate report
 curl -X POST http://localhost:5000/api/generate-report \
   -H "Content-Type: application/json" \
   -b "session=your_session_cookie" \
@@ -379,77 +287,12 @@ curl -X GET "http://localhost:5000/api/download-report/123?format=pdf" \
   -o security-report.pdf
 \`\`\`
 
-## 🧠 Machine Learning Features
-
-### Model Architecture
-
-#### LSTM Neural Network
-\`\`\`python
-# Model Configuration
-- Embedding Layer: 20,000 vocabulary, 100 dimensions
-- Bidirectional LSTM: 3 layers (128, 64, 32 units)
-- Batch Normalization: After each LSTM layer
-- Dropout: 0.5 for regularization
-- Dense Layers: 64 units with ReLU activation
-- Output: Sigmoid activation for binary classification
-\`\`\`
-
-#### Random Forest Classifier
-\`\`\`python
-# Model Configuration
-- Estimators: 100 decision trees
-- Features: TF-IDF vectorization (5000 features)
-- Max Depth: Auto-optimized
-- Random State: 42 for reproducibility
-\`\`\`
-
-#### Ensemble Prediction
-\`\`\`python
-# Weighted Ensemble
-final_prediction = 0.7 * lstm_prediction + 0.3 * rf_prediction
-confidence_threshold = 0.5
-\`\`\`
-
-### Training Your Own Models
-
-1. **Prepare Dataset**
-   \`\`\`csv
-   Query,Label
-   "SELECT * FROM users WHERE id = 1",0
-   "' OR 1=1--",1
-   "admin' OR '1'='1",1
-   \`\`\`
-
-2. **Train Models**
-   \`\`\`bash
-   python run.py --train-model your_dataset.csv
-   \`\`\`
-
-3. **Evaluate Performance**
-   \`\`\`python
-   from ml_model import SQLInjectionMLModel
-   
-   model = SQLInjectionMLModel()
-   info = model.get_model_info()
-   print(f"Models available: {info['models_available']}")
-   \`\`\`
-
-### Model Performance Metrics
-
-Based on the provided dataset, our models achieve:
-
-| Model | Accuracy | Precision | Recall | F1-Score | ROC-AUC |
-|-------|----------|-----------|--------|----------|---------|
-| LSTM | 98.31% | 99.74% | 97.02% | 98.36% | 99.49% |
-| Random Forest | 97.77% | 99.67% | 96.06% | 97.83% | 99.31% |
-| Ensemble | 98.45% | 99.71% | 97.15% | 98.42% | 99.52% |
-
-## 📊 AI-Powered Reporting
+## 📊 Reporting
 
 ### Report Features
 
 #### Executive Summary
-- AI-generated business impact analysis
+- Business impact analysis
 - Risk level assessment (Low/Medium/High/Critical)
 - Executive-friendly vulnerability overview
 - Compliance implications
@@ -492,7 +335,7 @@ Based on the provided dataset, our models achieve:
 # Custom report generation
 from report_generator import SQLIReportGenerator
 
-generator = SQLIReportGenerator(openai_api_key="your-key")
+generator = SQLIReportGenerator()
 report = generator.generate_complete_report(
     test_results=your_test_results,
     user_info=user_data,
@@ -516,13 +359,7 @@ class Config:
     REQUEST_TIMEOUT = 10
     MAX_CONCURRENT_TESTS = 5
     
-    # ML Model Settings
-    MODEL_DIR = 'models'
-    ENABLE_ML_ANALYSIS = True
-    ML_CONFIDENCE_THRESHOLD = 0.5
-    
     # Report Settings
-    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     REPORTS_DIR = 'reports'
     ENABLE_PDF_REPORTS = True
 \`\`\`
@@ -581,19 +418,7 @@ VALIDATION_RULES = {
 
 ### Common Issues
 
-#### 1. Model Training Fails
-\`\`\`bash
-# Check dataset format
-head -5 datasets/clean_sql_dataset.csv
-
-# Verify dependencies
-pip install tensorflow scikit-learn pandas
-
-# Check memory usage
-python -c "import psutil; print(f'RAM: {psutil.virtual_memory().available/1024/1024/1024:.1f}GB')"
-\`\`\`
-
-#### 2. PDF Generation Fails
+#### 1. PDF Generation Fails
 \`\`\`bash
 # Install wkhtmltopdf
 sudo apt-get install wkhtmltopdf
@@ -605,16 +430,7 @@ which wkhtmltopdf
 python -c "import pdfkit; print('PDF generation available')"
 \`\`\`
 
-#### 3. OpenAI API Issues
-\`\`\`bash
-# Verify API key
-echo $OPENAI_API_KEY
-
-# Test API connection
-python -c "import openai; openai.api_key='your-key'; print(openai.Model.list())"
-\`\`\`
-
-#### 4. Database Issues
+#### 2. Database Issues
 \`\`\`bash
 # Reset database
 rm sqli_tester.db
@@ -626,21 +442,14 @@ sqlite3 sqli_tester.db ".tables"
 
 ### Performance Optimization
 
-#### 1. Model Performance
-\`\`\`python
-# Optimize model loading
-export TF_CPP_MIN_LOG_LEVEL=2  # Reduce TensorFlow logging
-export CUDA_VISIBLE_DEVICES=0  # Use specific GPU
-\`\`\`
-
-#### 2. Testing Performance
+#### 1. Testing Performance
 \`\`\`python
 # Adjust concurrent workers
 MAX_WORKERS = 3  # Reduce for slower targets
 REQUEST_TIMEOUT = 15  # Increase for slow responses
 \`\`\`
 
-#### 3. Memory Usage
+#### 2. Memory Usage
 \`\`\`python
 # Monitor memory usage
 import psutil
@@ -648,21 +457,6 @@ print(f"Memory usage: {psutil.Process().memory_info().rss / 1024 / 1024:.1f} MB"
 \`\`\`
 
 ## 📈 Advanced Usage
-
-### Custom Model Training
-
-\`\`\`python
-# Train with custom parameters
-from ml_model import SQLInjectionMLModel
-
-model = SQLInjectionMLModel()
-results = model.train_models(
-    csv_path='custom_dataset.csv',
-    epochs=50,  # More training epochs
-    batch_size=64,  # Larger batch size
-    validation_split=0.3  # More validation data
-)
-\`\`\`
 
 ### Batch Testing
 
@@ -697,13 +491,13 @@ CUSTOM_PAYLOADS = {
 
 ## 🤝 Contributing
 
-We welcome contributions to improve SQL Injector v3.0! Please ensure all contributions follow ethical security research practices.
+We welcome contributions to improve SQL Injector v2.0! Please ensure all contributions follow ethical security research practices.
 
 ### Development Setup
 
 \`\`\`bash
 # Clone development branch
-git clone -b develop https://github.com/your-username/sql-injector-v3.git
+git clone -b develop https://github.com/your-username/sql-injector-v2.git
 
 # Install development dependencies
 pip install -r requirements-dev.txt
@@ -712,8 +506,8 @@ pip install -r requirements-dev.txt
 python -m pytest tests/
 
 # Code formatting
-black app/ ml_model.py report_generator.py
-flake8 app/ ml_model.py report_generator.py
+black app/ report_generator.py
+flake8 app/ report_generator.py
 \`\`\`
 
 ### Contribution Guidelines
@@ -737,9 +531,7 @@ This tool is provided for educational and authorized security testing purposes o
 ## 🙏 Acknowledgments
 
 - **Dataset**: SQL injection dataset from Kaggle community
-- **ML Libraries**: TensorFlow, scikit-learn, pandas teams
 - **Security Community**: OWASP and security researchers worldwide
-- **AI Integration**: OpenAI for GPT-4 API access
 
 ---
 

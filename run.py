@@ -41,42 +41,6 @@ def print_banner():
     """
     print(banner)
 
-def train_model_cli(csv_path):
-    """Train ML model from command line"""
-    try:
-        from ml_model import SQLInjectionMLModel
-        
-        print("🤖 Training Machine Learning Model...")
-        print("=" * 60)
-        
-        if not os.path.exists(csv_path):
-            print(f"❌ Error: CSV file not found at {csv_path}")
-            sys.exit(1)
-        
-        ml_model = SQLInjectionMLModel()
-        results = ml_model.train_models(csv_path)
-        
-        print("✅ Model training completed successfully!")
-        print()
-        print("📊 Training Results:")
-        print("-" * 40)
-        
-        print("LSTM Model:")
-        for metric, value in results['lstm_metrics'].items():
-            print(f"  {metric.title()}: {value:.4f}")
-        
-        print()
-        print("Random Forest Model:")
-        for metric, value in results['rf_metrics'].items():
-            print(f"  {metric.title()}: {value:.4f}")
-        
-        print()
-        print("🎯 Models saved and ready for use!")
-        
-    except Exception as e:
-        print(f"❌ Error training model: {e}")
-        sys.exit(1)
-
 def fetch_payloads_info():
     """Fetch and display payload information"""
     try:
@@ -164,12 +128,6 @@ Legal Notice:
         help='Fetch and display payload information without starting the server'
     )
     
-    parser.add_argument(
-        '--train-model',
-        metavar='CSV_PATH',
-        help='Train ML model using the specified CSV dataset'
-    )
-    
     args = parser.parse_args()
     
     # Setup logging
@@ -178,10 +136,6 @@ Legal Notice:
     # Handle payload fetching
     if args.fetch_payloads:
         fetch_payloads_info()
-        return
-    
-    if args.train_model:
-        train_model_cli(args.train_model)
         return
     
     # Print banner

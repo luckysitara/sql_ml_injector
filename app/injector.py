@@ -10,7 +10,6 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from threading import Lock
 import logging
 from payloads import get_all_payloads, get_payloads_by_category, get_payload_stats
-from ml_model import SQLInjectionMLModel
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -25,7 +24,6 @@ class SQLInjectionTester:
         self.payloads = self._load_payloads()
         self.error_patterns = self._load_error_patterns()
         self.results_lock = Lock()
-        self.ml_model = SQLInjectionMLModel()
     
     def _load_payloads(self):
         """Load SQL injection payloads from the CSV dataset"""
@@ -469,25 +467,6 @@ class SQLInjectionTester:
                     vulnerability_detected = True
                     detection_reason = "Response contains blocking/filtering indicators"
             
-            # ML-based vulnerability analysis
-            if hasattr(self, 'ml_model') and self.ml_model:
-                ml_result = self.ml_model.predict_vulnerability(payload)
-                ml_confidence = ml_result.get('confidence', 0.0)
-                ml_vulnerable = ml_result.get('is_vulnerable', False)
-                
-                # Analyze response patterns
-                response_analysis = self.ml_model.analyze_response_patterns(
-                    response_text, response.status_code, response_time
-                )
-                
-                # Combine traditional and ML detection
-                if ml_vulnerable and ml_confidence > 0.7:
-                    vulnerability_detected = True
-                    detection_reason = f"ML model detected vulnerability (confidence: {ml_confidence:.2f})"
-                elif response_analysis['confidence_score'] > 0.5:
-                    vulnerability_detected = True
-                    detection_reason = f"Response pattern analysis detected vulnerability (score: {response_analysis['confidence_score']:.2f})"
-            
             return {
                 'payload': payload,
                 'status_code': response.status_code,
@@ -496,8 +475,6 @@ class SQLInjectionTester:
                 'detection_reason': detection_reason,
                 'response_time': response_time,
                 'error_detected': error_detected,
-                'ml_analysis': ml_result if 'ml_result' in locals() else None,
-                'response_analysis': response_analysis if 'response_analysis' in locals() else None
             }
             
         except requests.exceptions.Timeout:
