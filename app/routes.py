@@ -11,6 +11,10 @@ from urllib.parse import urlparse
 import logging
 import json
 import time
+from ml_model import SQLInjectionMLModel
+from report_generator import SQLIReportGenerator
+import tempfile
+import os
 
 # Create blueprint
 main = Blueprint('main', __name__)
@@ -336,6 +340,168 @@ def health_check():
         'payload_count': len(tester.get_payloads()),
         'version': '2.0.0'
     })
+
+@main.route('/api/train-model', methods=['POST'])
+@login_required
+def train_model():
+    """Train ML model with uploaded dataset"""
+    try:
+        if 'dataset' not in request.files:
+            return jsonify({'error': 'No dataset file provided'}), 400
+        
+        file = request.files['dataset']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp_file:
+            file.save(tmp_file.name)
+            
+            # Train model
+            ml_model = SQLInjectionMLModel()
+            results = ml_model.train_models(tmp_file.name)
+            
+            # Clean up temporary file
+            os.unlink(tmp_file.name)
+            
+            logger.info(f"User {current_user.username} trained ML model successfully")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Model trained successfully',
+                'results': results
+            })
+            
+    except Exception as e:
+        logger.error(f"Error training model: {str(e)}")
+        return jsonify({'error': f'Failed to train model: {str(e)}'}), 500
+
+@main.route('/api/model-info')
+@login_required
+def get_model_info():
+    """Get ML model information"""
+    try:
+        ml_model = SQLInjectionMLModel()
+        info = ml_model.get_model_info()
+        return jsonify(info)
+    except Exception as e:
+        logger.error(f"Error getting model info: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/api/generate-report', methods=['POST'])
+@login_required
+def generate_report():
+    """Generate AI-powered security report"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        format_type = data.get('format', 'html')
+        
+        if not session_id:
+            return jsonify({'error': 'Session ID required'}), 400
+        
+        # Get test session
+        test_session = TestSession.query.filter_by(
+            id=session_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not test_session:
+            return jsonify({'error': 'Test session not found'}), 404
+        
+        # Parse test results
+        test_results = json.loads(test_session.results_json) if test_session.results_json else {}
+        
+        # Add session metadata
+        test_results.update({
+            'target_url': test_session.target_url,
+            'parameter': test_session.parameter,
+            'method': test_session.method,
+            'total_payloads': test_session.total_payloads,
+            'vulnerabilities_found': test_session.vulnerabilities_found
+        })
+        
+        # Generate report
+        generator = SQLIReportGenerator()
+        report = generator.generate_complete_report(
+            test_results,
+            user_info=current_user.to_dict(),
+            format_type=format_type
+        )
+        
+        logger.info(f"User {current_user.username} generated {format_type} report for session {session_id}")
+        
+        return jsonify({
+            'success': True,
+            'report': report
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating report: {str(e)}")
+        return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
+
+@main.route('/api/download-report/<int:session_id>')
+@login_required
+def download_report(session_id):
+    """Download report as file"""
+    try:
+        format_type = request.args.get('format', 'html')
+        
+        # Get test session
+        test_session = TestSession.query.filter_by(
+            id=session_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not test_session:
+            return jsonify({'error': 'Test session not found'}), 404
+        
+        # Parse test results
+        test_results = json.loads(test_session.results_json) if test_session.results_json else {}
+        test_results.update({
+            'target_url': test_session.target_url,
+            'parameter': test_session.parameter,
+            'method': test_session.method,
+            'total_payloads': test_session.total_payloads,
+            'vulnerabilities_found': test_session.vulnerabilities_found
+        })
+        
+        # Generate report
+        generator = SQLIReportGenerator()
+        report = generator.generate_complete_report(
+            test_results,
+            user_info=current_user.to_dict(),
+            format_type=format_type
+        )
+        
+        if format_type == 'pdf':
+            if 'pdf_content' in report:
+                from flask import Response
+                import base64
+                
+                pdf_data = base64.b64decode(report['pdf_content'])
+                filename = f"sqli-report-{session_id}-{int(time.time())}.pdf"
+                
+                return Response(
+                    pdf_data,
+                    mimetype='application/pdf',
+                    headers={'Content-Disposition': f'attachment; filename={filename}'}
+                )
+            else:
+                return jsonify({'error': 'PDF generation failed'}), 500
+        else:
+            from flask import Response
+            filename = f"sqli-report-{session_id}-{int(time.time())}.html"
+            
+            return Response(
+                report['html_content'],
+                mimetype='text/html',
+                headers={'Content-Disposition': f'attachment; filename={filename}'}
+            )
+            
+    except Exception as e:
+        logger.error(f"Error downloading report: {str(e)}")
+        return jsonify({'error': f'Failed to download report: {str(e)}'}), 500
 
 def _is_internal_network(hostname):
     """
