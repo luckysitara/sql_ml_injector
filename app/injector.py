@@ -24,6 +24,19 @@ class SQLInjectionTester:
         self.payloads = self._load_payloads()
         self.error_patterns = self._load_error_patterns()
         self.results_lock = Lock()
+        
+        # Initialize ML model if available
+        try:
+            from ml_model import SQLInjectionMLModel
+            self.ml_model = SQLInjectionMLModel()
+            model_info = self.ml_model.get_model_info()
+            if model_info['rf_loaded']:
+                logger.info(f"Random Forest model loaded successfully: {model_info}")
+            else:
+                logger.warning("Random Forest model not loaded - using traditional detection only")
+        except Exception as e:
+            logger.warning(f"Could not initialize ML model: {e}")
+            self.ml_model = None
     
     def _load_payloads(self):
         """Load SQL injection payloads from the CSV dataset"""
@@ -172,13 +185,13 @@ class SQLInjectionTester:
         """Load SQL error patterns for vulnerability detection"""
         patterns = [
             # MySQL
-            r'mysql_fetch_array$$$$',
-            r'mysql_fetch_assoc$$$$',
-            r'mysql_fetch_row$$$$',
-            r'mysql_num_rows$$$$',
-            r'mysql_result$$$$',
-            r'mysql_connect$$$$',
-            r'mysql_query$$$$',
+            r'mysql_fetch_array',
+            r'mysql_fetch_assoc',
+            r'mysql_fetch_row',
+            r'mysql_num_rows',
+            r'mysql_result',
+            r'mysql_connect',
+            r'mysql_query',
             r'Warning.*mysql_',
             r'valid MySQL result',
             r'MySQLSyntaxErrorException',
@@ -440,6 +453,7 @@ class SQLInjectionTester:
             vulnerability_detected = False
             detection_reason = "No vulnerability detected"
             error_detected = False
+            risk_level = 'MINIMAL'
             
             # Check for SQL error patterns
             for pattern in self.error_patterns:
@@ -447,6 +461,7 @@ class SQLInjectionTester:
                     error_detected = True
                     vulnerability_detected = True
                     detection_reason = f"SQL error pattern detected: {pattern}"
+                    risk_level = 'HIGH'
                     break
             
             # Additional vulnerability checks
@@ -454,18 +469,58 @@ class SQLInjectionTester:
                 if response.status_code == 500:
                     vulnerability_detected = True
                     detection_reason = "Internal server error (500) - possible SQL error"
+                    risk_level = 'MEDIUM'
                 elif response_time > 5000:
                     vulnerability_detected = True
                     detection_reason = "Response time > 5 seconds - possible time-based injection"
+                    risk_level = 'MEDIUM'
                 elif len(response_text) == 0 and response.status_code == 200:
                     vulnerability_detected = True
                     detection_reason = "Empty response with 200 status - possible successful injection"
+                    risk_level = 'LOW'
                 elif response.status_code in [403, 406, 501, 999]:
                     vulnerability_detected = True
                     detection_reason = f"Suspicious HTTP status code ({response.status_code}) - possible WAF detection"
+                    risk_level = 'LOW'
                 elif 'blocked' in response_text.lower() or 'forbidden' in response_text.lower():
                     vulnerability_detected = True
                     detection_reason = "Response contains blocking/filtering indicators"
+                    risk_level = 'LOW'
+            
+            # Random Forest ML-based vulnerability analysis
+            ml_result = None
+            response_analysis = None
+            
+            if hasattr(self, 'ml_model') and self.ml_model:
+                try:
+                    # Predict vulnerability using Random Forest model
+                    ml_result = self.ml_model.predict_vulnerability(payload)
+                    ml_confidence = ml_result.get('confidence', 0.0)
+                    ml_vulnerable = ml_result.get('is_vulnerable', False)
+                    ml_risk_level = ml_result.get('risk_level', 'MINIMAL')
+                    
+                    # Analyze response patterns
+                    response_analysis = self.ml_model.analyze_response_patterns(
+                        response_text, response.status_code, response_time
+                    )
+                    
+                    # Combine traditional and ML detection
+                    if ml_vulnerable and ml_confidence > 0.7:
+                        vulnerability_detected = True
+                        detection_reason = f"Random Forest model detected vulnerability (confidence: {ml_confidence:.2f}, risk: {ml_risk_level})"
+                        risk_level = ml_risk_level
+                    elif response_analysis['confidence_score'] > 0.5:
+                        vulnerability_detected = True
+                        detection_reason = f"Response pattern analysis detected vulnerability (score: {response_analysis['confidence_score']:.2f})"
+                        risk_level = response_analysis['risk_level']
+                    
+                    # Update risk level if ML suggests higher risk
+                    risk_levels = {'MINIMAL': 0, 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3}
+                    if risk_levels.get(ml_risk_level, 0) > risk_levels.get(risk_level, 0):
+                        risk_level = ml_risk_level
+                        
+                except Exception as e:
+                    logger.error(f"Error in ML analysis: {e}")
             
             return {
                 'payload': payload,
@@ -475,6 +530,9 @@ class SQLInjectionTester:
                 'detection_reason': detection_reason,
                 'response_time': response_time,
                 'error_detected': error_detected,
+                'risk_level': risk_level,
+                'ml_analysis': ml_result,
+                'response_analysis': response_analysis
             }
             
         except requests.exceptions.Timeout:
@@ -485,7 +543,8 @@ class SQLInjectionTester:
                 'vulnerability_detected': True,
                 'detection_reason': 'Request timeout - possible time-based injection',
                 'response_time': int((time.time() - start_time) * 1000),
-                'error_detected': False
+                'error_detected': False,
+                'risk_level': 'MEDIUM'
             }
         except requests.exceptions.ConnectionError:
             return {
@@ -495,7 +554,8 @@ class SQLInjectionTester:
                 'vulnerability_detected': False,
                 'detection_reason': 'Connection error - target may be unreachable',
                 'response_time': int((time.time() - start_time) * 1000),
-                'error_detected': True
+                'error_detected': True,
+                'risk_level': 'MINIMAL'
             }
         except Exception as e:
             return {
@@ -505,7 +565,8 @@ class SQLInjectionTester:
                 'vulnerability_detected': True,
                 'detection_reason': f'Network error: {str(e)}',
                 'response_time': int((time.time() - start_time) * 1000),
-                'error_detected': True
+                'error_detected': True,
+                'risk_level': 'LOW'
             }
     
     def test_target(self, target_url, parameter, method, custom_headers=None, cookies=None, max_workers=5):
@@ -525,6 +586,7 @@ class SQLInjectionTester:
         """
         results = []
         vulnerabilities_found = 0
+        risk_summary = {'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'MINIMAL': 0}
         
         # Parse custom headers
         headers = {}
@@ -553,6 +615,10 @@ class SQLInjectionTester:
                     if result['vulnerability_detected']:
                         with self.results_lock:
                             vulnerabilities_found += 1
+                    
+                    # Count risk levels
+                    risk_level = result.get('risk_level', 'MINIMAL')
+                    risk_summary[risk_level] = risk_summary.get(risk_level, 0) + 1
                             
                     # Add small delay to avoid overwhelming the target
                     time.sleep(0.1)
@@ -567,13 +633,30 @@ class SQLInjectionTester:
                         'vulnerability_detected': True,
                         'detection_reason': f'Test execution error: {str(e)}',
                         'response_time': 0,
-                        'error_detected': True
+                        'error_detected': True,
+                        'risk_level': 'LOW'
                     })
         
-        # Sort results by vulnerability status (vulnerable first)
-        results.sort(key=lambda x: (not x['vulnerability_detected'], x['payload']))
+        # Sort results by risk level and vulnerability status
+        risk_order = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2, 'MINIMAL': 3}
+        results.sort(key=lambda x: (
+            not x['vulnerability_detected'], 
+            risk_order.get(x.get('risk_level', 'MINIMAL'), 3),
+            x['payload']
+        ))
+        
+        # Calculate overall risk assessment
+        if risk_summary['HIGH'] > 0:
+            overall_risk = 'HIGH'
+        elif risk_summary['MEDIUM'] > 0:
+            overall_risk = 'MEDIUM'
+        elif risk_summary['LOW'] > 0:
+            overall_risk = 'LOW'
+        else:
+            overall_risk = 'MINIMAL'
         
         logger.info(f"Test completed: {vulnerabilities_found}/{len(self.payloads)} vulnerabilities found")
+        logger.info(f"Risk summary: {risk_summary}")
         
         return {
             'success': True,
@@ -581,5 +664,7 @@ class SQLInjectionTester:
             'total_payloads': len(self.payloads),
             'vulnerabilities_found': vulnerabilities_found,
             'target_url': target_url,
-            'parameter': parameter
+            'parameter': parameter,
+            'risk_summary': risk_summary,
+            'overall_risk': overall_risk
         }

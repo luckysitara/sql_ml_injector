@@ -1,0 +1,22 @@
+2025-06-02 04:33:27,778 - app.injector - INFO - Loading SQL injection payloads from CSV dataset...
+2025-06-02 04:33:28,918 - app.injector - INFO - CSV Headers: ['bootkit@bootkit-lab:~/Downloads$ head -2000 clean_sql_dataset.csv']
+2025-06-02 04:33:28,934 - app.injector - INFO - Processed 1877 rows from CSV
+2025-06-02 04:33:28,934 - app.injector - INFO - Skipped 2 invalid/duplicate payloads
+2025-06-02 04:33:28,934 - app.injector - INFO - Extracted 1835 unique SQL injection payloads
+2025-06-02 04:33:28,936 - app.injector - INFO - Payloads cached to csv_payloads_cache.json
+2025-06-02 04:33:28,937 - app.injector - INFO - Successfully loaded 1835 payloads from CSV dataset
+2025-06-02 04:33:28,937 - app.injector - INFO - Loaded 93 SQL error patterns
+2025-06-02 04:33:29,004 - ml_model - WARNING - Random Forest model not found at models/rf_model.pkl
+2025-06-02 04:33:29,012 - ml_model - WARNING - Vectorizer not found at models/vectorizer.pkl
+2025-06-02 04:33:29,012 - app.injector - WARNING - Random Forest model not loaded - using traditional detection only
+2025-06-02 04:33:29,018 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.0.2.15:5000
+2025-06-02 04:33:29,018 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-06-02 04:33:38,853 - werkzeug - INFO - 127.0.0.1 - - [02/Jun/2025 04:33:38] "GET / HTTP/1.1" 200 -
+2025-06-02 04:33:38,936 - werkzeug - INFO - 127.0.0.1 - - [02/Jun/2025 04:33:38] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-06-02 04:33:40,249 - werkzeug - INFO - 127.0.0.1 - - [02/Jun/2025 04:33:40] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-06-02 04:33:40,653 - werkzeug - INFO - 127.0.0.1 - - [02/Jun/2025 04:33:40] "GET /auth/profile HTTP/1.1" 200 -
+2025-06-02 04:33:40,660 - werkzeug - INFO - 127.0.0.1 - - [02/Jun/2025 04:33:40] "GET /api/payload-stats HTTP/1.1" 200 -
+2025-06-02 04:33:40,699 - werkzeug - INFO - 127.0.0.1 - - [02/Jun/2025 04:33:40] "GET /api/test-history?per_page=5 HTTP/1.1" 200 -

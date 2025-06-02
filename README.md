@@ -30,7 +30,7 @@ SQL Injector v2.0 is a security testing platform that focuses on SQL injection v
 
 ## 🏗️ Architecture Overview
 
-```
+\`\`\`
 SQL Injector v2.0 Architecture
 ├── Frontend (React + Tailwind CSS)
 │   ├── Real-time Testing Interface
@@ -52,11 +52,11 @@ SQL Injector v2.0 Architecture
     ├── SQLite Database (User Data)
     ├── CSV Payload Database
     └── Test Results Storage
-```
+\`\`\`
 
 ## 📁 Project Structure
 
-```
+\`\`\`
 sql-injector-v2/
 │
 ├── app/                          # Flask application
@@ -85,7 +85,7 @@ sql-injector-v2/
 │   └── pdf/                    # PDF reports
 │
 └── README.md                    # This file
-```
+\`\`\`
 
 ## 🛠️ Installation & Setup
 
@@ -98,14 +98,14 @@ sql-injector-v2/
 
 ### Step 1: Clone the Repository
 
-```bash
+\`\`\`bash
 git clone https://github.com/your-username/sql-injector-v2.git
 cd sql-injector-v2
-```
+\`\`\`
 
 ### Step 2: Create Virtual Environment
 
-```bash
+\`\`\`bash
 # Create virtual environment
 python -m venv venv
 
@@ -114,11 +114,11 @@ python -m venv venv
 venv\Scripts\activate
 # On macOS/Linux:
 source venv/bin/activate
-```
+\`\`\`
 
 ### Step 3: Install Dependencies
 
-```bash
+\`\`\`bash
 # Install Python dependencies
 pip install -r requirements.txt
 
@@ -131,21 +131,21 @@ brew install wkhtmltopdf
 
 # On Windows:
 # Download from: https://wkhtmltopdf.org/downloads.html
-```
+\`\`\`
 
 ### Step 4: Environment Configuration
 
-```bash
+\`\`\`bash
 # Copy environment template
 cp .env.example .env
 
 # Edit .env file with your configuration
 nano .env
-```
+\`\`\`
 
 **Required Environment Variables:**
 
-```env
+\`\`\`env
 # Flask Configuration
 SECRET_KEY=your_super_secret_key_here
 FLASK_DEBUG=False
@@ -161,14 +161,14 @@ MAX_CONCURRENT_TESTS=5
 # Report Configuration
 REPORTS_DIR=reports
 ENABLE_PDF_REPORTS=True
-```
+\`\`\`
 
 ### Step 5: Initialize Database
 
-```bash
+\`\`\`bash
 # Initialize the database and create default admin user
 python run.py --init-db
-```
+\`\`\`
 
 This creates:
 - Database tables
@@ -176,22 +176,22 @@ This creates:
 
 ### Step 6: Start the Application
 
-```bash
+\`\`\`bash
 # Start the web application
 python run.py
 
 # Or with custom configuration
 python run.py --host 0.0.0.0 --port 8080 --debug
-```
+\`\`\`
 
 ## 🚀 Usage Guide
 
 ### Web Interface
 
 1. **Access the Application**
-   ```
+   \`\`\`
    http://localhost:5000
-   ```
+   \`\`\`
 
 2. **Login with Default Credentials**
    - Username: `admin`
@@ -217,7 +217,7 @@ python run.py --host 0.0.0.0 --port 8080 --debug
 
 ### Command Line Interface
 
-```bash
+\`\`\`bash
 # View all available options
 python run.py --help
 
@@ -229,12 +229,12 @@ python run.py --host 127.0.0.1 --port 8080 --debug
 
 # Initialize database
 python run.py --init-db
-```
+\`\`\`
 
 ### API Usage
 
 #### Authentication
-```bash
+\`\`\`bash
 # Login and get session
 curl -X POST http://localhost:5000/auth/login \
   -H "Content-Type: application/json" \
@@ -245,10 +245,10 @@ curl -X POST http://localhost:5000/auth/api-keys \
   -H "Content-Type: application/json" \
   -b "session=your_session_cookie" \
   -d '{"key_name": "test-key"}'
-```
+\`\`\`
 
 #### SQL Injection Testing
-```bash
+\`\`\`bash
 # Run test with session authentication
 curl -X POST http://localhost:5000/api/test-sqli \
   -H "Content-Type: application/json" \
@@ -268,10 +268,10 @@ curl -X POST http://localhost:5000/api/test-sqli-public \
     "parameter": "id",
     "method": "GET"
   }'
-```
+\`\`\`
 
 #### Report Generation
-```bash
+\`\`\`bash
 # Generate report
 curl -X POST http://localhost:5000/api/generate-report \
   -H "Content-Type: application/json" \
@@ -285,7 +285,7 @@ curl -X POST http://localhost:5000/api/generate-report \
 curl -X GET "http://localhost:5000/api/download-report/123?format=pdf" \
   -b "session=your_session_cookie" \
   -o security-report.pdf
-```
+\`\`\`
 
 ## 📊 Reporting
 
@@ -331,7 +331,7 @@ curl -X GET "http://localhost:5000/api/download-report/123?format=pdf" \
 
 ### Customizing Reports
 
-```python
+\`\`\`python
 # Custom report generation
 from report_generator import SQLIReportGenerator
 
@@ -341,13 +341,13 @@ report = generator.generate_complete_report(
     user_info=user_data,
     format_type="pdf"
 )
-```
+\`\`\`
 
 ## 🔧 Configuration Options
 
 ### Application Settings
 
-```python
+\`\`\`python
 # app/config.py
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -362,11 +362,11 @@ class Config:
     # Report Settings
     REPORTS_DIR = 'reports'
     ENABLE_PDF_REPORTS = True
-```
+\`\`\`
 
 ### Payload Configuration
 
-```python
+\`\`\`python
 # payloads.py customization
 def get_custom_payloads():
     return [
@@ -374,11 +374,11 @@ def get_custom_payloads():
         "admin' OR '1'='1",
         # Add your custom payloads
     ]
-```
+\`\`\`
 
 ### Security Configuration
 
-```python
+\`\`\`python
 # Security headers and validation
 SECURITY_HEADERS = {
     'X-Content-Type-Options': 'nosniff',
@@ -392,7 +392,7 @@ VALIDATION_RULES = {
     'allowed_protocols': ['http', 'https'],
     'blocked_networks': ['127.0.0.1', '192.168.0.0/16']
 }
-```
+\`\`\`
 
 ## 🔒 Security Considerations
 
@@ -419,7 +419,7 @@ VALIDATION_RULES = {
 ### Common Issues
 
 #### 1. PDF Generation Fails
-```bash
+\`\`\`bash
 # Install wkhtmltopdf
 sudo apt-get install wkhtmltopdf
 
@@ -428,39 +428,39 @@ which wkhtmltopdf
 
 # Test PDF generation
 python -c "import pdfkit; print('PDF generation available')"
-```
+\`\`\`
 
 #### 2. Database Issues
-```bash
+\`\`\`bash
 # Reset database
 rm sqli_tester.db
 python run.py --init-db
 
 # Check database
 sqlite3 sqli_tester.db ".tables"
-```
+\`\`\`
 
 ### Performance Optimization
 
 #### 1. Testing Performance
-```python
+\`\`\`python
 # Adjust concurrent workers
 MAX_WORKERS = 3  # Reduce for slower targets
 REQUEST_TIMEOUT = 15  # Increase for slow responses
-```
+\`\`\`
 
 #### 2. Memory Usage
-```python
+\`\`\`python
 # Monitor memory usage
 import psutil
 print(f"Memory usage: {psutil.Process().memory_info().rss / 1024 / 1024:.1f} MB")
-```
+\`\`\`
 
 ## 📈 Advanced Usage
 
 ### Batch Testing
 
-```python
+\`\`\`python
 # Test multiple targets
 targets = [
     {'url': 'https://site1.com/page?id=1', 'param': 'id'},
@@ -470,11 +470,11 @@ targets = [
 for target in targets:
     results = test_target(target['url'], target['param'])
     generate_report(results)
-```
+\`\`\`
 
 ### Custom Payload Development
 
-```python
+\`\`\`python
 # Add custom payload categories
 CUSTOM_PAYLOADS = {
     'nosql_injection': [
@@ -487,7 +487,7 @@ CUSTOM_PAYLOADS = {
         "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM 'file:///etc/passwd'>]>"
     ]
 }
-```
+\`\`\`
 
 ## 🤝 Contributing
 
@@ -495,7 +495,7 @@ We welcome contributions to improve SQL Injector v2.0! Please ensure all contrib
 
 ### Development Setup
 
-```bash
+\`\`\`bash
 # Clone development branch
 git clone -b develop https://github.com/your-username/sql-injector-v2.git
 
@@ -508,7 +508,7 @@ python -m pytest tests/
 # Code formatting
 black app/ report_generator.py
 flake8 app/ report_generator.py
-```
+\`\`\`
 
 ### Contribution Guidelines
 
@@ -536,5 +536,3 @@ This tool is provided for educational and authorized security testing purposes o
 ---
 
 **Remember: Use this tool responsibly and only on systems you are authorized to test. Happy ethical hacking! 🛡️**
-
-

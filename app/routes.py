@@ -2,7 +2,7 @@
 Flask routes and API endpoints for the SQL injection testing tool.
 """
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, Response
 from flask_login import login_required, current_user
 from app.injector import SQLInjectionTester
 from app.models import TestSession, db
@@ -106,6 +106,7 @@ def test_sqli():
         
         # Log results summary
         logger.info(f"Test completed for user {current_user.username}: {results['vulnerabilities_found']}/{results['total_payloads']} vulnerabilities found")
+        logger.info(f"Overall risk level: {results.get('overall_risk', 'UNKNOWN')}")
         
         return jsonify(results)
         
@@ -189,6 +190,7 @@ def test_sqli_public():
         
         # Log results summary
         logger.info(f"API test completed: {results['vulnerabilities_found']}/{results['total_payloads']} vulnerabilities found")
+        logger.info(f"Overall risk level: {results.get('overall_risk', 'UNKNOWN')}")
         
         return jsonify(results)
         
@@ -329,14 +331,103 @@ def get_test_session(session_id):
         logger.error(f"Error getting test session: {str(e)}")
         return jsonify({'error': f'Failed to get test session: {str(e)}'}), 500
 
+@main.route('/api/model-info')
+@login_required
+def get_model_info():
+    """Get Random Forest model information"""
+    try:
+        if hasattr(tester, 'ml_model') and tester.ml_model:
+            info = tester.ml_model.get_model_info()
+            return jsonify(info)
+        else:
+            return jsonify({
+                'rf_loaded': False,
+                'vectorizer_loaded': False,
+                'error': 'ML model not initialized'
+            })
+    except Exception as e:
+        logger.error(f"Error getting model info: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/api/model-features')
+@login_required
+def get_model_features():
+    """Get Random Forest model feature importance"""
+    try:
+        if hasattr(tester, 'ml_model') and tester.ml_model:
+            features = tester.ml_model.get_feature_importance(top_n=50)
+            return jsonify(features)
+        else:
+            return jsonify({'error': 'ML model not initialized'})
+    except Exception as e:
+        logger.error(f"Error getting model features: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/api/predict-payload', methods=['POST'])
+@login_required
+def predict_payload():
+    """Predict if a single payload is malicious using Random Forest"""
+    try:
+        data = request.get_json()
+        payload = data.get('payload')
+        
+        if not payload:
+            return jsonify({'error': 'Payload is required'}), 400
+        
+        if hasattr(tester, 'ml_model') and tester.ml_model:
+            result = tester.ml_model.predict_vulnerability(payload)
+            return jsonify(result)
+        else:
+            return jsonify({'error': 'ML model not initialized'})
+            
+    except Exception as e:
+        logger.error(f"Error predicting payload: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/api/batch-predict', methods=['POST'])
+@login_required
+def batch_predict():
+    """Predict vulnerabilities for multiple payloads"""
+    try:
+        data = request.get_json()
+        payloads = data.get('payloads', [])
+        
+        if not payloads or not isinstance(payloads, list):
+            return jsonify({'error': 'Payloads list is required'}), 400
+        
+        if len(payloads) > 100:
+            return jsonify({'error': 'Maximum 100 payloads allowed per batch'}), 400
+        
+        if hasattr(tester, 'ml_model') and tester.ml_model:
+            results = tester.ml_model.batch_predict(payloads)
+            return jsonify({
+                'predictions': results,
+                'total_processed': len(results)
+            })
+        else:
+            return jsonify({'error': 'ML model not initialized'})
+            
+    except Exception as e:
+        logger.error(f"Error in batch prediction: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @main.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    model_status = 'not_loaded'
+    if hasattr(tester, 'ml_model') and tester.ml_model:
+        model_info = tester.ml_model.get_model_info()
+        if model_info['rf_loaded'] and model_info['vectorizer_loaded']:
+            model_status = 'loaded'
+        elif model_info['rf_loaded'] or model_info['vectorizer_loaded']:
+            model_status = 'partially_loaded'
+    
     return jsonify({
         'status': 'healthy',
         'service': 'SQL Injection Testing Tool',
         'payload_count': len(tester.get_payloads()),
-        'version': '2.0.0'
+        'ml_model_status': model_status,
+        'version': '3.0.0'
     })
 
 def _is_internal_network(hostname):
