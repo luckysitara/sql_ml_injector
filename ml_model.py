@@ -19,19 +19,37 @@ class SQLInjectionMLModel:
     Machine Learning model for SQL injection detection using pre-trained Random Forest model.
     """
     
-    def __init__(self, model_dir='models'):
+    def __init__(self, model_dir=None):
         """
         Initialize the ML model by loading pre-trained Random Forest model from disk.
         
         Args:
-            model_dir: Directory containing the pre-trained models
+            model_dir: Directory containing the pre-trained models (optional)
         """
-        self.model_dir = model_dir
+        # Try multiple possible model directories
+        possible_dirs = []
+        if model_dir:
+            possible_dirs.append(model_dir)
+        possible_dirs.extend(['models', 'model', './models', './model'])
+        
+        self.model_dir = None
         self.rf_model = None
         self.vectorizer = None
         
-        # Create models directory if it doesn't exist
-        os.makedirs(model_dir, exist_ok=True)
+        # Find the correct model directory
+        for dir_path in possible_dirs:
+            if os.path.exists(dir_path):
+                rf_path = os.path.join(dir_path, 'rf_model.pkl')
+                vec_path = os.path.join(dir_path, 'vectorizer.pkl')
+                if os.path.exists(rf_path) and os.path.exists(vec_path):
+                    self.model_dir = dir_path
+                    break
+        
+        if not self.model_dir:
+            logger.warning("No valid model directory found with required files")
+            # Create models directory if it doesn't exist
+            os.makedirs('models', exist_ok=True)
+            self.model_dir = 'models'
         
         # Load models if available
         self._load_models()
@@ -39,35 +57,40 @@ class SQLInjectionMLModel:
     def _load_models(self):
         """Load pre-trained Random Forest model and vectorizer from disk."""
         try:
+            # Check if joblib is available
+            try:
+                import joblib
+            except ImportError:
+                logger.error("joblib is not installed. Please install it with: pip install joblib")
+                return False
+            
             # Try to load Random Forest model
             rf_path = os.path.join(self.model_dir, 'rf_model.pkl')
             if os.path.exists(rf_path):
                 try:
-                    import joblib
                     self.rf_model = joblib.load(rf_path)
                     logger.info(f"Random Forest model loaded from {rf_path}")
                 except Exception as e:
                     logger.error(f"Error loading Random Forest model: {e}")
             else:
                 logger.warning(f"Random Forest model not found at {rf_path}")
-            
-            # Try to load vectorizer
-            vectorizer_path = os.path.join(self.model_dir, 'vectorizer.pkl')
-            if os.path.exists(vectorizer_path):
-                try:
-                    import joblib
-                    self.vectorizer = joblib.load(vectorizer_path)
-                    logger.info(f"Vectorizer loaded from {vectorizer_path}")
-                except Exception as e:
-                    logger.error(f"Error loading vectorizer: {e}")
-            else:
-                logger.warning(f"Vectorizer not found at {vectorizer_path}")
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error loading models: {e}")
-            return False
+        
+        # Try to load vectorizer
+        vectorizer_path = os.path.join(self.model_dir, 'vectorizer.pkl')
+        if os.path.exists(vectorizer_path):
+            try:
+                self.vectorizer = joblib.load(vectorizer_path)
+                logger.info(f"Vectorizer loaded from {vectorizer_path}")
+            except Exception as e:
+                logger.error(f"Error loading vectorizer: {e}")
+        else:
+            logger.warning(f"Vectorizer not found at {vectorizer_path}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error loading models: {e}")
+        return False
     
     def get_model_info(self):
         """

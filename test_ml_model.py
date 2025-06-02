@@ -5,6 +5,35 @@ Test script to verify Random Forest model loading and functionality.
 import os
 from ml_model import SQLInjectionMLModel
 
+def check_dependencies():
+    """Check if all required dependencies are installed"""
+    print("🔧 Checking Dependencies...")
+    print("=" * 30)
+    
+    required_packages = [
+        ('joblib', 'joblib'),
+        ('sklearn', 'scikit-learn'),
+        ('numpy', 'numpy')
+    ]
+    
+    missing_packages = []
+    
+    for package_name, pip_name in required_packages:
+        try:
+            __import__(package_name)
+            print(f"   ✅ {package_name}: Installed")
+        except ImportError:
+            print(f"   ❌ {package_name}: Missing")
+            missing_packages.append(pip_name)
+    
+    if missing_packages:
+        print(f"\n❌ Missing packages: {', '.join(missing_packages)}")
+        print(f"Install with: pip install {' '.join(missing_packages)}")
+        return False
+    
+    print("✅ All dependencies are installed!")
+    return True
+
 def test_model_loading():
     """Test if the Random Forest model loads correctly"""
     print("🔍 Testing Random Forest Model Loading...")
@@ -150,6 +179,11 @@ def main():
     """Main test function"""
     print("🚀 SQL Injection Random Forest Model Test Suite")
     print("=" * 60)
+    
+    # Test 0: Check Dependencies
+    if not check_dependencies():
+        print("\n❌ Dependencies missing. Please install required packages.")
+        return
     
     # Test 1: Model Loading
     if not test_model_loading():

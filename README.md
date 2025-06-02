@@ -30,7 +30,7 @@ SQL Injector v2.0 is a security testing platform that focuses on SQL injection v
 
 ## 🏗️ Architecture Overview
 
-\`\`\`
+```
 SQL Injector v2.0 Architecture
 ├── Frontend (React + Tailwind CSS)
 │   ├── Real-time Testing Interface
@@ -52,11 +52,11 @@ SQL Injector v2.0 Architecture
     ├── SQLite Database (User Data)
     ├── CSV Payload Database
     └── Test Results Storage
-\`\`\`
+```
 
 ## 📁 Project Structure
 
-\`\`\`
+```
 sql-injector-v2/
 │
 ├── app/                          # Flask application
@@ -85,7 +85,7 @@ sql-injector-v2/
 │   └── pdf/                    # PDF reports
 │
 └── README.md                    # This file
-\`\`\`
+```
 
 ## 🛠️ Installation & Setup
 
@@ -98,14 +98,14 @@ sql-injector-v2/
 
 ### Step 1: Clone the Repository
 
-\`\`\`bash
+```bash
 git clone https://github.com/your-username/sql-injector-v2.git
 cd sql-injector-v2
-\`\`\`
+```
 
 ### Step 2: Create Virtual Environment
 
-\`\`\`bash
+```bash
 # Create virtual environment
 python -m venv venv
 
@@ -114,11 +114,11 @@ python -m venv venv
 venv\Scripts\activate
 # On macOS/Linux:
 source venv/bin/activate
-\`\`\`
+```
 
 ### Step 3: Install Dependencies
 
-\`\`\`bash
+```bash
 # Install Python dependencies
 pip install -r requirements.txt
 
@@ -131,21 +131,21 @@ brew install wkhtmltopdf
 
 # On Windows:
 # Download from: https://wkhtmltopdf.org/downloads.html
-\`\`\`
+```
 
 ### Step 4: Environment Configuration
 
-\`\`\`bash
+```bash
 # Copy environment template
 cp .env.example .env
 
 # Edit .env file with your configuration
 nano .env
-\`\`\`
+```
 
 **Required Environment Variables:**
 
-\`\`\`env
+```env
 # Flask Configuration
 SECRET_KEY=your_super_secret_key_here
 FLASK_DEBUG=False
@@ -161,7 +161,7 @@ MAX_CONCURRENT_TESTS=5
 # Report Configuration
 REPORTS_DIR=reports
 ENABLE_PDF_REPORTS=True
-\`\`\`
+```
 
 ### Step 5: Initialize Database
 

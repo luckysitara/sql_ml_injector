@@ -24,6 +24,26 @@ tester = SQLInjectionTester()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def serialize_results(results):
+    """
+    Serialize test results to JSON-compatible format.
+    Handles numpy types and other non-serializable objects.
+    """
+    def convert_item(obj):
+        """Convert individual items to JSON-serializable format"""
+        if hasattr(obj, 'item'):  # numpy types
+            return obj.item()
+        elif isinstance(obj, (bool, int, float, str, type(None))):
+            return obj
+        elif isinstance(obj, dict):
+            return {k: convert_item(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [convert_item(item) for item in obj]
+        else:
+            return str(obj)  # Convert everything else to string
+    
+    return convert_item(results)
+
 @main.route('/')
 def index():
     """Serve the main application page"""
@@ -83,6 +103,9 @@ def test_sqli():
         # Calculate test duration
         test_duration = time.time() - start_time
         
+        # Serialize results for JSON storage
+        serialized_results = serialize_results(results)
+        
         # Save test session to database
         try:
             test_session = TestSession(
@@ -93,7 +116,7 @@ def test_sqli():
                 total_payloads=results['total_payloads'],
                 vulnerabilities_found=results['vulnerabilities_found'],
                 test_duration=test_duration,
-                results_json=json.dumps(results)
+                results_json=json.dumps(serialized_results)
             )
             db.session.add(test_session)
             db.session.commit()
@@ -108,7 +131,8 @@ def test_sqli():
         logger.info(f"Test completed for user {current_user.username}: {results['vulnerabilities_found']}/{results['total_payloads']} vulnerabilities found")
         logger.info(f"Overall risk level: {results.get('overall_risk', 'UNKNOWN')}")
         
-        return jsonify(results)
+        # Return serialized results
+        return jsonify(serialize_results(results))
         
     except Exception as e:
         logger.error(f"Error in SQL injection test: {str(e)}")
@@ -167,6 +191,9 @@ def test_sqli_public():
         # Calculate test duration
         test_duration = time.time() - start_time
         
+        # Serialize results for JSON storage
+        serialized_results = serialize_results(results)
+        
         # Save test session to database
         try:
             test_session = TestSession(
@@ -177,7 +204,7 @@ def test_sqli_public():
                 total_payloads=results['total_payloads'],
                 vulnerabilities_found=results['vulnerabilities_found'],
                 test_duration=test_duration,
-                results_json=json.dumps(results)
+                results_json=json.dumps(serialized_results)
             )
             db.session.add(test_session)
             db.session.commit()
@@ -192,7 +219,8 @@ def test_sqli_public():
         logger.info(f"API test completed: {results['vulnerabilities_found']}/{results['total_payloads']} vulnerabilities found")
         logger.info(f"Overall risk level: {results.get('overall_risk', 'UNKNOWN')}")
         
-        return jsonify(results)
+        # Return serialized results
+        return jsonify(serialize_results(results))
         
     except Exception as e:
         logger.error(f"Error in SQL injection test: {str(e)}")
@@ -338,7 +366,7 @@ def get_model_info():
     try:
         if hasattr(tester, 'ml_model') and tester.ml_model:
             info = tester.ml_model.get_model_info()
-            return jsonify(info)
+            return jsonify(serialize_results(info))
         else:
             return jsonify({
                 'rf_loaded': False,
@@ -356,7 +384,7 @@ def get_model_features():
     try:
         if hasattr(tester, 'ml_model') and tester.ml_model:
             features = tester.ml_model.get_feature_importance(top_n=50)
-            return jsonify(features)
+            return jsonify(serialize_results(features))
         else:
             return jsonify({'error': 'ML model not initialized'})
     except Exception as e:
@@ -376,7 +404,7 @@ def predict_payload():
         
         if hasattr(tester, 'ml_model') and tester.ml_model:
             result = tester.ml_model.predict_vulnerability(payload)
-            return jsonify(result)
+            return jsonify(serialize_results(result))
         else:
             return jsonify({'error': 'ML model not initialized'})
             
@@ -401,7 +429,7 @@ def batch_predict():
         if hasattr(tester, 'ml_model') and tester.ml_model:
             results = tester.ml_model.batch_predict(payloads)
             return jsonify({
-                'predictions': results,
+                'predictions': serialize_results(results),
                 'total_processed': len(results)
             })
         else:
@@ -410,6 +438,56 @@ def batch_predict():
     except Exception as e:
         logger.error(f"Error in batch prediction: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@main.route('/api/generate-report', methods=['POST'])
+@login_required
+def generate_report():
+    """Generate a security report for a test session"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        format_type = data.get('format', 'html')
+        
+        if not session_id:
+            return jsonify({'error': 'Session ID is required'}), 400
+        
+        # Get test session
+        test_session = TestSession.query.filter_by(
+            id=session_id, 
+            user_id=current_user.id
+        ).first()
+        
+        if not test_session:
+            return jsonify({'error': 'Test session not found'}), 404
+        
+        # Parse results
+        if not test_session.results_json:
+            return jsonify({'error': 'No results data available for this session'}), 400
+        
+        try:
+            results_data = json.loads(test_session.results_json)
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Invalid results data'}), 400
+        
+        # Generate report using the report generator
+        try:
+            from report_generator import SQLIReportGenerator
+            
+            generator = SQLIReportGenerator()
+            report = generator.generate_complete_report(
+                test_results=results_data,
+                user_info=current_user.to_dict(),
+                format_type=format_type
+            )
+            
+            return jsonify(serialize_results(report))
+            
+        except ImportError:
+            return jsonify({'error': 'Report generator not available'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error generating report: {str(e)}")
+        return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
 
 @main.route('/api/health', methods=['GET'])
 def health_check():
